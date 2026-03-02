@@ -284,21 +284,36 @@
         }
     }
 
-    async function getPumpFunMetadata(mints) {
+    async function getTokenMetadata(mints) {
+        if (!mints.length) return {};
         const meta = {};
-        await Promise.all(mints.map(async (mint) => {
-            try {
-                const resp = await fetch(`https://frontend-api-v3.pump.fun/coins/${mint}`);
-                if (resp.ok) {
-                    const data = await resp.json();
-                    meta[mint] = {
-                        name: data.name || null,
-                        symbol: data.symbol || null,
-                        image: data.image_uri || null,
-                    };
-                }
-            } catch { /* not a pump.fun token */ }
-        }));
+        try {
+            const resp = await fetch(HELIUS_RPC, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    jsonrpc: '2.0', id: 1,
+                    method: 'getAssetBatch',
+                    params: { ids: mints },
+                }),
+            });
+            const data = await resp.json();
+            for (const asset of (data.result || [])) {
+                const id = asset.id;
+                const m = asset.content?.metadata || {};
+                const creators = asset.creators || [];
+                // Check if it's a pump.fun token (pump program as creator/authority)
+                const isPump = JSON.stringify(asset).includes('6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P');
+                meta[id] = {
+                    name: m.name || null,
+                    symbol: m.symbol || null,
+                    image: asset.content?.links?.image || null,
+                    isPumpFun: isPump,
+                };
+            }
+        } catch (e) {
+            console.warn('metadata fetch failed', e);
+        }
         return meta;
     }
 
@@ -396,7 +411,7 @@
 
             // Get token prices and metadata
             const prices = await getTokenPrices(mints);
-            const pumpMeta = await getPumpFunMetadata(mints);
+            const pumpMeta = await getTokenMetadata(mints);
 
             // Calculate values
             let totalTokenValueUsd = 0;
@@ -407,7 +422,7 @@
                 h.valueUsd = h.amount * h.price;
                 h.symbol = meta?.symbol || priceData?.mintSymbol || h.mint.slice(0, 6) + '...';
                 h.name = meta?.name || h.symbol;
-                h.isPumpFun = !!meta;
+                h.isPumpFun = meta?.isPumpFun || false;
                 totalTokenValueUsd += h.valueUsd;
             }
 
