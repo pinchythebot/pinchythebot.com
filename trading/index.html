@@ -329,11 +329,10 @@
 
     async function getTransactionHistory() {
         try {
-            const result = await rpc('getSignaturesForAddress', [
-                WALLET,
-                { limit: 50 },
-            ]);
-            return result || [];
+            const resp = await fetch(
+                `https://api.helius.xyz/v0/addresses/${WALLET}/transactions?api-key=03cf5b3d-2534-4364-b3d9-523d6f0a4463&limit=50`
+            );
+            return await resp.json();
         } catch {
             return [];
         }
@@ -450,12 +449,10 @@
                 ? formatUsd(totalTokenValueUsd)
                 : 'No open positions';
 
-            // Count trades from tx history (swaps)
-            const swapTxCount = txHistory.filter(tx =>
-                tx.memo?.includes('swap') || !tx.err
-            ).length;
-            document.getElementById('total-trades').textContent = txHistory.length;
-            document.getElementById('win-rate').textContent = 'Transactions on-chain';
+            // Count actual trades (swaps only, not transfers)
+            const trades = txHistory.filter(tx => tx.type === 'SWAP');
+            document.getElementById('total-trades').textContent = trades.length;
+            document.getElementById('win-rate').textContent = trades.length === 1 ? '1 trade executed' : `${trades.length} trades executed`;
 
             // Render holdings table
             const holdingsContainer = document.getElementById('holdings-container');
@@ -506,17 +503,28 @@
             if (txHistory.length === 0) {
                 txContainer.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 1rem;">No transactions yet</p>';
             } else {
+                const typeLabels = {
+                    'SWAP': '🔄 Swap',
+                    'TRANSFER': '💸 Transfer',
+                    'CREATE': '🆕 Create',
+                    'UNKNOWN': '❓ Unknown',
+                };
+                const typeClass = { 'SWAP': 'buy' };
                 txContainer.innerHTML = `
                     <ul class="tx-list">
                         ${txHistory.slice(0, 20).map(tx => {
-                            const isErr = tx.err !== null;
+                            const label = typeLabels[tx.type] || tx.type || '—';
+                            const cls = typeClass[tx.type] || '';
+                            const source = tx.source ? ` · ${tx.source.replace(/_/g, ' ').toLowerCase()}` : '';
+                            const ts = tx.timestamp ? timeAgo(tx.timestamp) : '—';
                             return `
                                 <li>
                                     <span>
-                                        <span class="tx-type ${isErr ? '' : 'buy'}">${isErr ? '❌ Failed' : '✅ Success'}</span>
+                                        <span class="tx-type ${cls}">${label}</span>
+                                        <span style="font-size:0.75rem; color:var(--text-muted)">${source}</span>
                                         <a href="https://solscan.io/tx/${tx.signature}" target="_blank" style="font-size:0.8rem; margin-left:0.5rem">${tx.signature.slice(0,12)}...</a>
                                     </span>
-                                    <span style="font-size:0.8rem">${tx.blockTime ? timeAgo(tx.blockTime) : '—'}</span>
+                                    <span style="font-size:0.8rem">${ts}</span>
                                 </li>`;
                         }).join('')}
                     </ul>`;
@@ -544,9 +552,9 @@
         // Start point: initial deposit
         if (txHistory.length > 0) {
             const oldestTx = txHistory[txHistory.length - 1];
-            if (oldestTx.blockTime) {
+            if (oldestTx.timestamp) {
                 points.push({
-                    x: new Date(oldestTx.blockTime * 1000),
+                    x: new Date(oldestTx.timestamp * 1000),
                     y: INITIAL_DEPOSIT_SOL * solPrice,
                 });
             }
