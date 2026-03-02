@@ -217,14 +217,8 @@
         <div class="card">
             <h2>🧠 Strategy</h2>
             <div class="strategy-info">
-                <p>Automated pump.fun graduation scalper filtering for <strong>Tier A</strong> tokens:</p>
-                <ul style="padding-left: 1.2rem; margin-top: 0.5rem;">
-                    <li>No website (organic memes only)</li>
-                    <li>First-time deployer (<code>deployer_token_count = 0</code>)</li>
-                    <li>80-95% bonding progress (near graduation)</li>
-                </ul>
-                <p style="margin-top: 0.75rem;">Exits: <code>-15%</code> stop loss · sell at graduation</p>
-                <p>Max position: <code>0.1 SOL</code> · Max 3 open · Daily loss limit: <code>1 SOL</code></p>
+                <p>Automated Solana memecoin trading bot. Uses on-chain signal filtering to identify high-probability short-term trades.</p>
+                <p style="margin-top: 0.75rem;">Small position sizes, strict risk management. Building in public — tracking real results with real money.</p>
             </div>
         </div>
 
@@ -288,6 +282,24 @@
         } catch {
             return {};
         }
+    }
+
+    async function getPumpFunMetadata(mints) {
+        const meta = {};
+        await Promise.all(mints.map(async (mint) => {
+            try {
+                const resp = await fetch(`https://frontend-api-v3.pump.fun/coins/${mint}`);
+                if (resp.ok) {
+                    const data = await resp.json();
+                    meta[mint] = {
+                        name: data.name || null,
+                        symbol: data.symbol || null,
+                        image: data.image_uri || null,
+                    };
+                }
+            } catch { /* not a pump.fun token */ }
+        }));
+        return meta;
     }
 
     async function getSolPrice() {
@@ -382,16 +394,20 @@
                 }
             }
 
-            // Get token prices
+            // Get token prices and metadata
             const prices = await getTokenPrices(mints);
+            const pumpMeta = await getPumpFunMetadata(mints);
 
             // Calculate values
             let totalTokenValueUsd = 0;
             for (const h of holdings) {
                 const priceData = prices[h.mint];
+                const meta = pumpMeta[h.mint];
                 h.price = priceData ? parseFloat(priceData.price) : 0;
                 h.valueUsd = h.amount * h.price;
-                h.symbol = priceData?.mintSymbol || h.mint.slice(0, 6) + '...';
+                h.symbol = meta?.symbol || priceData?.mintSymbol || h.mint.slice(0, 6) + '...';
+                h.name = meta?.name || h.symbol;
+                h.isPumpFun = !!meta;
                 totalTokenValueUsd += h.valueUsd;
             }
 
@@ -449,8 +465,11 @@
                             ${holdings.map(h => `
                                 <tr>
                                     <td>
-                                        <span class="token-name">${h.symbol}</span><br>
-                                        <a href="https://solscan.io/token/${h.mint}" target="_blank" style="font-size:0.75rem">${h.mint.slice(0,8)}...</a>
+                                        <span class="token-name">${h.name}</span>
+                                        <span class="token-symbol">${h.name !== h.symbol ? h.symbol : ''}</span><br>
+                                        ${h.isPumpFun
+                                            ? `<a href="https://pump.fun/coin/${h.mint}" target="_blank" style="font-size:0.75rem">pump.fun</a> · `
+                                            : ''}<a href="https://solscan.io/token/${h.mint}" target="_blank" style="font-size:0.75rem">solscan</a>
                                     </td>
                                     <td style="text-align:right">${h.amount.toLocaleString(undefined, {maximumFractionDigits: 2})}</td>
                                     <td style="text-align:right">${h.price ? '$' + h.price.toFixed(h.price < 0.01 ? 8 : 4) : '—'}</td>
