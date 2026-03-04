@@ -1,634 +1,342 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trading Dashboard 🦀 — Pinchy</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦀</text></svg>">
-    <link rel="stylesheet" href="../style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-    <style>
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-        @media (max-width: 600px) {
-            .dashboard-grid { grid-template-columns: 1fr; }
-        }
-        .stat-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 1.25rem;
-            text-align: center;
-        }
-        .stat-card .label {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 0.35rem;
-        }
-        .stat-card .value {
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: var(--text);
-        }
-        .stat-card .sub {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            margin-top: 0.25rem;
-        }
-        .positive { color: #3fb950 !important; }
-        .negative { color: #f85149 !important; }
-        .neutral { color: var(--text-muted) !important; }
-
-        .holdings-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        .holdings-table th {
-            text-align: left;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: var(--text-muted);
-            padding: 0.5rem 0.75rem;
-            border-bottom: 1px solid var(--border);
-        }
-        .holdings-table td {
-            padding: 0.75rem;
-            border-bottom: 1px solid var(--border);
-            font-size: 0.9rem;
-            color: var(--text-muted);
-        }
-        .holdings-table tr:last-child td { border-bottom: none; }
-        .holdings-table .token-name {
-            color: var(--text);
-            font-weight: 600;
-        }
-        .holdings-table .token-symbol {
-            color: var(--text-muted);
-            font-size: 0.8rem;
-        }
-
-        .chart-container {
-            position: relative;
-            height: 250px;
-            margin-top: 1rem;
-        }
-
-        .tx-list {
-            list-style: none;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-        .tx-list li {
-            padding: 0.6rem 0;
-            border-bottom: 1px solid var(--border);
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .tx-list li:last-child { border-bottom: none; }
-        .tx-type { font-weight: 600; }
-        .tx-type.buy { color: #3fb950; }
-        .tx-type.sell { color: #f85149; }
-
-        .loading {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-muted);
-        }
-        .loading .spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 2px solid var(--border);
-            border-top-color: var(--accent);
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin-right: 0.5rem;
-            vertical-align: middle;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        .wallet-addr {
-            font-family: monospace;
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            word-break: break-all;
-        }
-        .wallet-addr a { color: var(--link); }
-
-        .last-updated {
-            text-align: center;
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            margin-top: 0.5rem;
-        }
-
-        .strategy-info {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            line-height: 1.7;
-        }
-        .strategy-info code {
-            background: var(--bg);
-            padding: 0.1rem 0.35rem;
-            border-radius: 3px;
-            font-size: 0.8em;
-            color: var(--accent);
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sol Sniper Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #e6edf3; padding: 20px; }
+  .header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+  .header h1 { font-size: 24px; }
+  .loading { text-align: center; padding: 60px; color: #8b949e; }
+  .loading .spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid #30363d; border-top-color: #58a6ff; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 12px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .stat-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px; }
+  .stat-card .label { font-size: 12px; color: #8b949e; text-transform: uppercase; margin-bottom: 4px; }
+  .stat-card .value { font-size: 24px; font-weight: 600; }
+  .stat-card .value.positive { color: #3fb950; }
+  .stat-card .value.negative { color: #f85149; }
+  .chart-container { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px; margin-bottom: 24px; }
+  .chart-container h2 { font-size: 16px; margin-bottom: 12px; color: #8b949e; }
+  .chart-container canvas { min-height: 350px; }
+  .trades-section { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px; }
+  .trades-section h2 { font-size: 16px; margin-bottom: 12px; color: #8b949e; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; padding: 8px 12px; border-bottom: 1px solid #30363d; color: #8b949e; font-weight: 500; }
+  td { padding: 8px 12px; border-bottom: 1px solid #21262d; }
+  tr:hover { background: #1c2128; }
+  .pnl-positive { color: #3fb950; font-weight: 600; }
+  .pnl-negative { color: #f85149; font-weight: 600; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500; }
+  .badge-win { background: #23883433; color: #3fb950; }
+  .badge-loss { background: #f8514933; color: #f85149; }
+  .badge-open { background: #1f6feb33; color: #58a6ff; }
+  .time { color: #8b949e; font-size: 12px; }
+  .wallet-info { color: #8b949e; font-size: 12px; margin-bottom: 8px; }
+  .wallet-info a { color: #58a6ff; text-decoration: none; }
+  .refresh-note { text-align: center; color: #484f58; font-size: 12px; margin-top: 16px; }
+  .error { text-align: center; padding: 40px; color: #f85149; }
+</style>
 </head>
 <body>
-    <div class="container">
-        <div class="breadcrumb">
-            <a href="/">← pinchythebot.com</a>
-        </div>
+<div class="header">
+  <span style="font-size:28px">&#x1F3AF;</span>
+  <h1>Sol Sniper</h1>
+</div>
 
-        <div class="hero" style="margin-bottom: 2rem;">
-            <span class="emoji" style="font-size: 3rem;">📈</span>
-            <h1>Trading <span class="accent">Dashboard</span></h1>
-            <p class="tagline">Live Solana trading bot performance</p>
-        </div>
+<div id="app">
+  <div class="loading">
+    <div class="spinner"></div>
+    <p>Loading on-chain data...</p>
+  </div>
+</div>
 
-        <!-- Wallet info -->
-        <div style="text-align: center; margin-bottom: 1.5rem;">
-            <span class="wallet-addr">
-                <a id="wallet-link" href="#" target="_blank" rel="noopener"></a>
-            </span>
-        </div>
+<script>
+const WALLET = 'gR3HoEeJCbbvfNRVAFUSmp6fqg5BwMZ6dNgo6K9QWXJ';
+const HELIUS_API_KEY = '03cf5b3d-2534-4364-b3d9-523d6f0a4463';
+const HELIUS_RPC = 'https://mainnet.helius-rpc.com/?api-key=' + HELIUS_API_KEY;
+const HELIUS_API = 'https://api.helius.xyz/v0';
+const SOL_MINT = 'So11111111111111111111111111111111111111112';
+const STABLES = new Set([
+  'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+  'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
+]);
+const STARTING_SOL = 1.0;
 
-        <!-- Stats grid -->
-        <div class="dashboard-grid">
-            <div class="stat-card">
-                <div class="label">Wallet Balance</div>
-                <div class="value" id="balance-sol">—</div>
-                <div class="sub" id="balance-usd"></div>
-            </div>
-            <div class="stat-card">
-                <div class="label">Total P&L</div>
-                <div class="value" id="total-pnl">—</div>
-                <div class="sub" id="total-pnl-pct"></div>
-            </div>
-            <div class="stat-card">
-                <div class="label">Open Positions</div>
-                <div class="value" id="open-positions">—</div>
-                <div class="sub" id="open-value"></div>
-            </div>
-            <div class="stat-card">
-                <div class="label">Total Trades</div>
-                <div class="value" id="total-trades">—</div>
-                <div class="sub" id="win-rate"></div>
-            </div>
-        </div>
+async function getWalletSignatures(wallet, limit) {
+  limit = limit || 200;
+  var allSigs = [];
+  var before = undefined;
+  while (allSigs.length < limit) {
+    var params = [wallet, { limit: 100 }];
+    if (before) params[1].before = before;
+    var resp = await fetch(HELIUS_RPC, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getSignaturesForAddress', params: params }),
+    });
+    var data = await resp.json();
+    var sigs = data.result || [];
+    if (!sigs.length) break;
+    allSigs.push.apply(allSigs, sigs.filter(function(s) { return !s.err; }));
+    before = sigs[sigs.length - 1].signature;
+    if (sigs.length < 100) break;
+  }
+  return allSigs;
+}
 
-        <!-- Holdings -->
-        <div class="card">
-            <h2>💰 Current Holdings</h2>
-            <div id="holdings-container">
-                <div class="loading"><span class="spinner"></span> Loading holdings...</div>
-            </div>
-        </div>
-
-        <!-- PnL Chart -->
-        <div class="card">
-            <h2>📊 Portfolio Value Over Time</h2>
-            <div class="chart-container">
-                <canvas id="pnl-chart"></canvas>
-            </div>
-        </div>
-
-        <!-- Recent Transactions -->
-        <div class="card">
-            <h2>🔄 Recent Transactions</h2>
-            <div id="tx-container">
-                <div class="loading"><span class="spinner"></span> Loading transactions...</div>
-            </div>
-        </div>
-
-        <!-- Strategy info -->
-        <div class="card">
-            <h2>🧠 Strategy</h2>
-            <div class="strategy-info">
-                <p>Automated Solana memecoin trading bot. Uses on-chain signal filtering to identify high-probability short-term trades.</p>
-                <p style="margin-top: 0.75rem;">Small position sizes, strict risk management. Building in public — tracking real results with real money.</p>
-            </div>
-        </div>
-
-        <div class="last-updated" id="last-updated"></div>
-
-        <footer>
-            <p>Built by Pinchy 🦀 · Data from Solana blockchain · Auto-refreshes every 30s</p>
-        </footer>
-    </div>
-
-    <script>
-    const WALLET = 'gR3HoEeJCbbvfNRVAFUSmp6fqg5BwMZ6dNgo6K9QWXJ';
-    const HELIUS_RPC = 'https://mainnet.helius-rpc.com/?api-key=03cf5b3d-2534-4364-b3d9-523d6f0a4463';
-    const JUPITER_PRICE = 'https://api.jup.ag/price/v2';
-    const INITIAL_DEPOSIT_SOL = 1.0;  // Starting balance for PnL calc
-
-    // Solscan link
-    document.getElementById('wallet-link').href = `https://solscan.io/account/${WALLET}`;
-    document.getElementById('wallet-link').textContent = `${WALLET.slice(0, 8)}...${WALLET.slice(-6)}`;
-
-    let pnlChart = null;
-
-    async function rpc(method, params) {
-        const resp = await fetch(HELIUS_RPC, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
-        });
-        const data = await resp.json();
-        if (data.error) throw new Error(data.error.message);
-        return data.result;
+async function getEnhancedTransactions(signatures) {
+  var all = [];
+  for (var i = 0; i < signatures.length; i += 100) {
+    var batch = signatures.slice(i, i + 100);
+    var resp = await fetch(HELIUS_API + '/transactions?api-key=' + HELIUS_API_KEY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ transactions: batch }),
+    });
+    if (resp.ok) {
+      var txns = await resp.json();
+      all.push.apply(all, txns);
     }
+  }
+  return all;
+}
 
-    async function getSolBalance() {
-        const result = await rpc('getBalance', [WALLET]);
-        return result.value / 1e9;
+async function getSOLBalance(wallet) {
+  var resp = await fetch(HELIUS_RPC, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getBalance', params: [wallet] }),
+  });
+  var data = await resp.json();
+  return ((data.result || {}).value || 0) / 1e9;
+}
+
+function parseSwaps(txns, wallet) {
+  var swaps = [];
+  for (var ti = 0; ti < txns.length; ti++) {
+    var tx = txns[ti];
+    if (tx.type !== 'SWAP') continue;
+    var transfers = tx.tokenTransfers || [];
+    var nativeTransfers = tx.nativeTransfers || [];
+    var ts = tx.timestamp ? new Date(tx.timestamp * 1000).toISOString() : null;
+    var solSent = 0, solReceived = 0;
+    var tokenMint = null, tokenSent = 0, tokenReceived = 0;
+    for (var ni = 0; ni < nativeTransfers.length; ni++) {
+      var nt = nativeTransfers[ni];
+      var amt = (nt.amount || 0) / 1e9;
+      if (nt.fromUserAccount === wallet) solSent += amt;
+      if (nt.toUserAccount === wallet) solReceived += amt;
     }
-
-    async function getTokenAccounts() {
-        const result = await rpc('getTokenAccountsByOwner', [
-            WALLET,
-            { programId: 'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb' },
-            { encoding: 'jsonParsed' },
-        ]);
-        // Also check legacy SPL token program
-        const legacyResult = await rpc('getTokenAccountsByOwner', [
-            WALLET,
-            { programId: 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA' },
-            { encoding: 'jsonParsed' },
-        ]);
-        return [...(result.value || []), ...(legacyResult.value || [])];
+    for (var ki = 0; ki < transfers.length; ki++) {
+      var t = transfers[ki];
+      var mint = t.mint || '';
+      var tamt = t.tokenAmount || 0;
+      if (mint === SOL_MINT) {
+        if (t.fromUserAccount === wallet) solSent += tamt;
+        if (t.toUserAccount === wallet) solReceived += tamt;
+      } else if (STABLES.has(mint)) {
+        if (t.fromUserAccount === wallet) solSent += tamt / 150;
+        if (t.toUserAccount === wallet) solReceived += tamt / 150;
+      } else {
+        if (t.toUserAccount === wallet) { tokenMint = mint; tokenReceived += tamt; }
+        if (t.fromUserAccount === wallet) { tokenMint = mint; tokenSent += tamt; }
+      }
     }
-
-    async function getTokenPrices(mints) {
-        if (!mints.length) return {};
-        const ids = mints.join(',');
-        try {
-            const resp = await fetch(`${JUPITER_PRICE}?ids=${ids}`);
-            const data = await resp.json();
-            return data.data || {};
-        } catch {
-            return {};
-        }
+    if (!tokenMint) continue;
+    var isBuy = tokenReceived > 0 && solSent > 0.001;
+    var isSell = tokenSent > 0 && (solReceived > 0 || solSent < 0.01);
+    if (isBuy) {
+      swaps.push({ ts: ts, type: 'BUY', mint: tokenMint, solAmount: Math.max(solSent - solReceived, 0), tokenAmount: tokenReceived, sig: tx.signature });
+    } else if (isSell) {
+      swaps.push({ ts: ts, type: 'SELL', mint: tokenMint, solAmount: Math.max(solReceived - solSent, 0), tokenAmount: tokenSent, sig: tx.signature });
     }
+  }
+  swaps.sort(function(a, b) { return new Date(a.ts) - new Date(b.ts); });
+  return swaps;
+}
 
-    async function getTokenMetadata(mints) {
-        if (!mints.length) return {};
-        const meta = {};
-        try {
-            const resp = await fetch(HELIUS_RPC, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    jsonrpc: '2.0', id: 1,
-                    method: 'getAssetBatch',
-                    params: { ids: mints },
-                }),
-            });
-            const data = await resp.json();
-            for (const asset of (data.result || [])) {
-                const id = asset.id;
-                const m = asset.content?.metadata || {};
-                const creators = asset.creators || [];
-                // Check if it's a pump.fun token (pump program as creator/authority)
-                const isPump = JSON.stringify(asset).includes('6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P');
-                meta[id] = {
-                    name: m.name || null,
-                    symbol: m.symbol || null,
-                    image: asset.content?.links?.image || null,
-                    isPumpFun: isPump,
-                };
-            }
-        } catch (e) {
-            console.warn('metadata fetch failed', e);
-        }
-        return meta;
+function buildTrades(swaps) {
+  var open = {};
+  var closed = [];
+  for (var i = 0; i < swaps.length; i++) {
+    var s = swaps[i];
+    if (s.type === 'BUY') {
+      if (!open[s.mint]) open[s.mint] = { totalSol: 0, totalTokens: 0, firstTs: s.ts };
+      open[s.mint].totalSol += s.solAmount;
+      open[s.mint].totalTokens += s.tokenAmount;
+    } else if (s.type === 'SELL') {
+      var pos = open[s.mint];
+      if (!pos) continue;
+      var pnlSol = s.solAmount - pos.totalSol;
+      var pnlPct = pos.totalSol > 0 ? (pnlSol / pos.totalSol) * 100 : 0;
+      closed.push({
+        mint: s.mint, entryTime: pos.firstTs, exitTime: s.ts,
+        solSpent: pos.totalSol, solReceived: s.solAmount,
+        pnlSol: pnlSol, pnlPct: pnlPct
+      });
+      delete open[s.mint];
     }
+  }
+  var keys = Object.keys(open);
+  for (var j = 0; j < keys.length; j++) {
+    var m = keys[j], p = open[m];
+    closed.push({ mint: m, entryTime: p.firstTs, exitTime: null, solSpent: p.totalSol, solReceived: null, pnlSol: null, pnlPct: null, isOpen: true });
+  }
+  closed.sort(function(a, b) { return new Date(b.entryTime) - new Date(a.entryTime); });
+  return closed;
+}
 
-    async function getSolPrice() {
-        try {
-            const resp = await fetch(`${JUPITER_PRICE}?ids=So11111111111111111111111111111111111111112`);
-            const data = await resp.json();
-            return parseFloat(data.data?.['So11111111111111111111111111111111111111112']?.price || 0);
-        } catch {
-            return 0;
-        }
+function buildWalletHistory(swaps, startingSol) {
+  var history = [];
+  var balance = startingSol;
+  if (swaps.length > 0) history.push({ ts: swaps[0].ts, sol: startingSol, event: 'Start' });
+  for (var i = 0; i < swaps.length; i++) {
+    var s = swaps[i];
+    if (s.type === 'BUY') balance -= s.solAmount;
+    else balance += s.solAmount;
+    history.push({ ts: s.ts, sol: Math.round(balance * 10000) / 10000, event: s.type + ' ' + s.mint.slice(0, 8) + '...' });
+  }
+  return history;
+}
+
+async function getTokenMetadata(mints) {
+  var meta = {};
+  var unique = [];
+  var seen = {};
+  for (var i = 0; i < mints.length; i++) {
+    if (!seen[mints[i]]) { unique.push(mints[i]); seen[mints[i]] = true; }
+  }
+  // Use Helius DAS getAssetBatch for pump.fun Token-2022 tokens
+  try {
+    var resp = await fetch(HELIUS_RPC, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getAssetBatch', params: { ids: unique } }),
+    });
+    if (resp.ok) {
+      var data = await resp.json();
+      var results = data.result || [];
+      for (var j = 0; j < results.length; j++) {
+        var asset = results[j];
+        if (!asset || !asset.id) continue;
+        var cm = ((asset.content || {}).metadata || {});
+        meta[asset.id] = { symbol: cm.symbol || asset.id.slice(0, 8), name: cm.name || '' };
+      }
     }
+  } catch (e) { console.warn('Token metadata fetch failed:', e); }
+  return meta;
+}
 
-    async function getTransactionHistory() {
-        try {
-            const resp = await fetch(
-                `https://api.helius.xyz/v0/addresses/${WALLET}/transactions?api-key=03cf5b3d-2534-4364-b3d9-523d6f0a4463&limit=50`
-            );
-            return await resp.json();
-        } catch {
-            return [];
-        }
+function fmtTime(iso) {
+  if (!iso) return '-';
+  return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+function pnlClass(val) { return val == null ? '' : val >= 0 ? 'pnl-positive' : 'pnl-negative'; }
+function pnlSign(val, dec, suf) { if (val == null) return '-'; dec = dec || 4; suf = suf || ''; return (val >= 0 ? '+' : '') + val.toFixed(dec) + suf; }
+
+var chart = null;
+
+function render(trades, history, summary, tokenMeta, currentBalance) {
+  var app = document.getElementById('app');
+  app.innerHTML = '<div class="wallet-info">Wallet: <a href="https://solscan.io/account/' + WALLET + '" target="_blank">' + WALLET.slice(0, 8) + '...' + WALLET.slice(-6) + '</a> &nbsp;|&nbsp; Current balance: <strong>' + currentBalance.toFixed(4) + ' SOL</strong></div>' +
+    '<div class="stats">' +
+    '<div class="stat-card"><div class="label">Total Trades</div><div class="value">' + summary.total + '</div></div>' +
+    '<div class="stat-card"><div class="label">Win Rate</div><div class="value">' + summary.winRate + '%</div></div>' +
+    '<div class="stat-card"><div class="label">Wins / Losses</div><div class="value">' + summary.wins + ' / ' + summary.losses + '</div></div>' +
+    '<div class="stat-card"><div class="label">Total PnL</div><div class="value ' + (summary.totalPnl >= 0 ? 'positive' : 'negative') + '">' + pnlSign(summary.totalPnl) + ' SOL</div></div>' +
+    '<div class="stat-card"><div class="label">Best Trade</div><div class="value positive">' + pnlSign(summary.bestPct, 1, '%') + '</div></div>' +
+    '<div class="stat-card"><div class="label">Worst Trade</div><div class="value negative">' + pnlSign(summary.worstPct, 1, '%') + '</div></div>' +
+    '</div>' +
+    '<div class="chart-container"><h2>Wallet Value (SOL)</h2><canvas id="walletChart"></canvas></div>' +
+    '<div class="trades-section"><h2>Trade History</h2><table><thead><tr><th>Token</th><th>Entry Time</th><th>Exit Time</th><th>SOL In</th><th>SOL Out</th><th>PnL %</th><th>PnL (SOL)</th><th>Status</th></tr></thead><tbody id="tradesBody"></tbody></table></div>' +
+    '<p class="refresh-note">Data sourced directly from on-chain transactions via Helius API</p>';
+
+  // Chart
+  var labels = history.map(function(h) { return new Date(h.ts); });
+  var data = history.map(function(h) { return h.sol; });
+  labels.push(new Date());
+  data.push(currentBalance);
+
+  var ctx = document.getElementById('walletChart').getContext('2d');
+  var endVal = data[data.length - 1] || 1;
+  var startVal = data[0] || 1;
+  var lineColor = endVal >= startVal ? '#3fb950' : '#f85149';
+
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: { labels: labels, datasets: [{ data: data, borderColor: lineColor, backgroundColor: lineColor + '1a', fill: true, tension: 0.1, pointRadius: 4, pointBackgroundColor: lineColor, pointHoverRadius: 6 }] },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false }, tooltip: { callbacks: {
+        title: function(items) { return fmtTime((history[items[0].dataIndex] || {}).ts || new Date().toISOString()); },
+        afterLabel: function(item) { return (history[item.dataIndex] || {}).event || 'Current'; }
+      }}},
+      scales: {
+        x: { type: 'time', time: { unit: 'hour' }, grid: { color: '#21262d' }, ticks: { color: '#8b949e' } },
+        y: { min: Math.min.apply(null, data) * 0.95, max: Math.max.apply(null, data) * 1.05, grid: { color: '#21262d' }, ticks: { color: '#8b949e', callback: function(v) { return v.toFixed(4) + ' SOL'; } } }
+      }
     }
+  });
 
-    async function getTransactionDetails(signatures) {
-        if (!signatures.length) return [];
-        try {
-            const result = await rpc('getTransactions', [
-                signatures,
-                { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 },
-            ]);
-            return result || [];
-        } catch {
-            // Fall back to individual fetches
-            const txs = [];
-            for (const sig of signatures.slice(0, 10)) {
-                try {
-                    const tx = await rpc('getTransaction', [
-                        sig, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 },
-                    ]);
-                    if (tx) txs.push(tx);
-                } catch { /* skip */ }
-            }
-            return txs;
-        }
-    }
+  // Trades table
+  var tbody = document.getElementById('tradesBody');
+  var rows = '';
+  for (var i = 0; i < trades.length; i++) {
+    var tr = trades[i];
+    var meta = tokenMeta[tr.mint] || {};
+    var sym = (meta.symbol || tr.mint.slice(0, 8)).replace(/\0/g, '').trim();
+    var isOpen = tr.isOpen;
+    var badge = isOpen ? '<span class="badge badge-open">OPEN</span>' : tr.pnlSol >= 0 ? '<span class="badge badge-win">WIN</span>' : '<span class="badge badge-loss">LOSS</span>';
+    rows += '<tr><td><a href="https://pump.fun/coin/' + tr.mint + '" target="_blank" style="color:#e6edf3;text-decoration:none"><strong>' + sym + '</strong></a> <span class="time">' + tr.mint.slice(0, 12) + '...</span></td>' +
+      '<td class="time">' + fmtTime(tr.entryTime) + '</td>' +
+      '<td class="time">' + fmtTime(tr.exitTime) + '</td>' +
+      '<td>' + tr.solSpent.toFixed(4) + '</td>' +
+      '<td>' + (tr.solReceived != null ? tr.solReceived.toFixed(4) : '-') + '</td>' +
+      '<td class="' + pnlClass(tr.pnlPct) + '">' + pnlSign(tr.pnlPct, 1, '%') + '</td>' +
+      '<td class="' + pnlClass(tr.pnlSol) + '">' + pnlSign(tr.pnlSol) + '</td>' +
+      '<td>' + badge + '</td></tr>';
+  }
+  tbody.innerHTML = rows;
+}
 
-    function formatSol(val) {
-        return val.toFixed(4);
-    }
-
-    function formatUsd(val) {
-        return val < 0
-            ? `-$${Math.abs(val).toFixed(2)}`
-            : `$${val.toFixed(2)}`;
-    }
-
-    function pnlClass(val) {
-        return val > 0.001 ? 'positive' : val < -0.001 ? 'negative' : 'neutral';
-    }
-
-    function timeAgo(ts) {
-        const secs = Math.floor(Date.now() / 1000 - ts);
-        if (secs < 60) return `${secs}s ago`;
-        if (secs < 3600) return `${Math.floor(secs / 60)}m ago`;
-        if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
-        return `${Math.floor(secs / 86400)}d ago`;
-    }
-
-    async function loadDashboard() {
-        try {
-            const [solBalance, tokenAccounts, solPrice, txHistory] = await Promise.all([
-                getSolBalance(),
-                getTokenAccounts(),
-                getSolPrice(),
-                getTransactionHistory(),
-            ]);
-
-            // Parse token holdings
-            const holdings = [];
-            const mints = [];
-            for (const acct of tokenAccounts) {
-                const info = acct.account.data.parsed.info;
-                const amount = parseFloat(info.tokenAmount.uiAmountString || '0');
-                if (amount > 0) {
-                    holdings.push({
-                        mint: info.mint,
-                        amount,
-                        decimals: info.tokenAmount.decimals,
-                    });
-                    mints.push(info.mint);
-                }
-            }
-
-            // Get token prices and metadata
-            const prices = await getTokenPrices(mints);
-            const pumpMeta = await getTokenMetadata(mints);
-
-            // Calculate values
-            let totalTokenValueUsd = 0;
-            for (const h of holdings) {
-                const priceData = prices[h.mint];
-                const meta = pumpMeta[h.mint];
-                h.price = priceData ? parseFloat(priceData.price) : 0;
-                h.valueUsd = h.amount * h.price;
-                h.symbol = meta?.symbol || priceData?.mintSymbol || h.mint.slice(0, 6) + '...';
-                h.name = meta?.name || h.symbol;
-                h.isPumpFun = meta?.isPumpFun || false;
-                totalTokenValueUsd += h.valueUsd;
-            }
-
-            const solValueUsd = solBalance * solPrice;
-            const totalValueUsd = solValueUsd + totalTokenValueUsd;
-            const totalValueSol = solBalance + (totalTokenValueUsd / (solPrice || 1));
-            const pnlSol = totalValueSol - INITIAL_DEPOSIT_SOL;
-            const pnlUsd = pnlSol * solPrice;
-            const pnlPct = (pnlSol / INITIAL_DEPOSIT_SOL) * 100;
-
-            // Update stats
-            document.getElementById('balance-sol').textContent = `${formatSol(totalValueSol)} SOL`;
-            document.getElementById('balance-usd').textContent = formatUsd(totalValueUsd);
-
-            const pnlEl = document.getElementById('total-pnl');
-            pnlEl.textContent = `${pnlSol >= 0 ? '+' : ''}${formatSol(pnlSol)} SOL`;
-            pnlEl.className = `value ${pnlClass(pnlSol)}`;
-
-            const pnlPctEl = document.getElementById('total-pnl-pct');
-            pnlPctEl.textContent = `${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(1)}% · ${formatUsd(pnlUsd)}`;
-            pnlPctEl.className = `sub ${pnlClass(pnlSol)}`;
-
-            document.getElementById('open-positions').textContent = holdings.length;
-            document.getElementById('open-value').textContent = holdings.length > 0
-                ? formatUsd(totalTokenValueUsd)
-                : 'No open positions';
-
-            // Count actual trades (swaps only, not transfers)
-            const trades = txHistory.filter(tx => tx.type === 'SWAP');
-            document.getElementById('total-trades').textContent = trades.length;
-            document.getElementById('win-rate').textContent = trades.length === 1 ? '1 trade executed' : `${trades.length} trades executed`;
-
-            // Render holdings table
-            const holdingsContainer = document.getElementById('holdings-container');
-            if (holdings.length === 0) {
-                holdingsContainer.innerHTML = `
-                    <p style="color: var(--text-muted); text-align: center; padding: 1rem;">
-                        No token holdings — ${formatSol(solBalance)} SOL in wallet
-                    </p>`;
-            } else {
-                holdings.sort((a, b) => b.valueUsd - a.valueUsd);
-                holdingsContainer.innerHTML = `
-                    <table class="holdings-table">
-                        <thead>
-                            <tr>
-                                <th>Token</th>
-                                <th style="text-align:right">Amount</th>
-                                <th style="text-align:right">Price</th>
-                                <th style="text-align:right">Value</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${holdings.map(h => `
-                                <tr>
-                                    <td>
-                                        <span class="token-name">${h.name}</span>
-                                        <span class="token-symbol">${h.name !== h.symbol ? h.symbol : ''}</span><br>
-                                        ${h.isPumpFun
-                                            ? `<a href="https://pump.fun/coin/${h.mint}" target="_blank" style="font-size:0.75rem">pump.fun</a> · `
-                                            : ''}<a href="https://solscan.io/token/${h.mint}" target="_blank" style="font-size:0.75rem">solscan</a>
-                                    </td>
-                                    <td style="text-align:right">${h.amount.toLocaleString(undefined, {maximumFractionDigits: 2})}</td>
-                                    <td style="text-align:right">${h.price ? '$' + h.price.toFixed(h.price < 0.01 ? 8 : 4) : '—'}</td>
-                                    <td style="text-align:right">${h.price ? formatUsd(h.valueUsd) : '—'}</td>
-                                </tr>
-                            `).join('')}
-                            <tr style="border-top: 2px solid var(--border);">
-                                <td><span class="token-name">SOL</span></td>
-                                <td style="text-align:right">${formatSol(solBalance)}</td>
-                                <td style="text-align:right">${formatUsd(solPrice)}</td>
-                                <td style="text-align:right">${formatUsd(solValueUsd)}</td>
-                            </tr>
-                        </tbody>
-                    </table>`;
-            }
-
-            // Render transactions
-            const txContainer = document.getElementById('tx-container');
-            if (txHistory.length === 0) {
-                txContainer.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 1rem;">No transactions yet</p>';
-            } else {
-                const typeLabels = {
-                    'SWAP': '🔄 Swap',
-                    'TRANSFER': '💸 Transfer',
-                    'CREATE': '🆕 Create',
-                    'UNKNOWN': '❓ Unknown',
-                };
-                const typeClass = { 'SWAP': 'buy' };
-                txContainer.innerHTML = `
-                    <ul class="tx-list">
-                        ${txHistory.slice(0, 20).map(tx => {
-                            const label = typeLabels[tx.type] || tx.type || '—';
-                            const cls = typeClass[tx.type] || '';
-                            const source = tx.source ? ` · ${tx.source.replace(/_/g, ' ').toLowerCase()}` : '';
-                            const ts = tx.timestamp ? timeAgo(tx.timestamp) : '—';
-                            return `
-                                <li>
-                                    <span>
-                                        <span class="tx-type ${cls}">${label}</span>
-                                        <span style="font-size:0.75rem; color:var(--text-muted)">${source}</span>
-                                        <a href="https://solscan.io/tx/${tx.signature}" target="_blank" style="font-size:0.8rem; margin-left:0.5rem">${tx.signature.slice(0,12)}...</a>
-                                    </span>
-                                    <span style="font-size:0.8rem">${ts}</span>
-                                </li>`;
-                        }).join('')}
-                    </ul>`;
-            }
-
-            // Build PnL chart from transaction history
-            // We'll show portfolio value snapshots based on tx timestamps
-            buildPnlChart(txHistory, solPrice);
-
-            // Update timestamp
-            document.getElementById('last-updated').textContent =
-                `Last updated: ${new Date().toLocaleTimeString()}`;
-
-        } catch (err) {
-            console.error('Dashboard error:', err);
-        }
-    }
-
-    function buildPnlChart(txHistory, solPrice) {
-        const ctx = document.getElementById('pnl-chart').getContext('2d');
-
-        // Build data points from tx history (simplified — uses timestamps)
-        const points = [];
-
-        // Start point: initial deposit
-        if (txHistory.length > 0) {
-            const oldestTx = txHistory[txHistory.length - 1];
-            if (oldestTx.timestamp) {
-                points.push({
-                    x: new Date(oldestTx.timestamp * 1000),
-                    y: INITIAL_DEPOSIT_SOL * solPrice,
-                });
-            }
-        }
-
-        // For now show start and current value
-        // (Full historical reconstruction would need parsing each tx's balance changes)
-        points.push({
-            x: new Date(),
-            y: INITIAL_DEPOSIT_SOL * solPrice, // Will be updated with real data as trades happen
-        });
-
-        if (pnlChart) pnlChart.destroy();
-
-        pnlChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                datasets: [{
-                    label: 'Portfolio Value (USD)',
-                    data: points,
-                    borderColor: '#e85d3a',
-                    backgroundColor: 'rgba(232, 93, 58, 0.1)',
-                    fill: true,
-                    tension: 0.3,
-                    pointRadius: 3,
-                    pointBackgroundColor: '#e85d3a',
-                    borderWidth: 2,
-                }],
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        type: 'time',
-                        adapters: {
-                            date: {},
-                        },
-                        time: {
-                            unit: 'hour',
-                            displayFormats: { hour: 'MMM d, ha' },
-                        },
-                        grid: { color: 'rgba(48, 54, 61, 0.5)' },
-                        ticks: { color: '#8b949e' },
-                    },
-                    y: {
-                        grid: { color: 'rgba(48, 54, 61, 0.5)' },
-                        ticks: {
-                            color: '#8b949e',
-                            callback: v => '$' + v.toFixed(2),
-                        },
-                    },
-                },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: ctx => `$${ctx.parsed.y.toFixed(2)}`,
-                        },
-                    },
-                },
-            },
-        });
-    }
-
-    // Chart.js time scale adapter
-    // Using chartjs-adapter-date-fns via CDN
-    const adapterScript = document.createElement('script');
-    adapterScript.src = 'https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3';
-    adapterScript.onload = () => {
-        loadDashboard();
-        setInterval(loadDashboard, 30000); // Refresh every 30s
+async function main() {
+  try {
+    var results = await Promise.all([getWalletSignatures(WALLET), getSOLBalance(WALLET)]);
+    var sigData = results[0];
+    var currentBalance = results[1];
+    var sigs = sigData.map(function(s) { return s.signature; });
+    var txns = await getEnhancedTransactions(sigs);
+    var swaps = parseSwaps(txns, WALLET);
+    var mints = swaps.map(function(s) { return s.mint; });
+    var tokenMeta = await getTokenMetadata(mints);
+    var trades = buildTrades(swaps);
+    var history = buildWalletHistory(swaps, STARTING_SOL);
+    var closed = trades.filter(function(t) { return !t.isOpen; });
+    var wins = closed.filter(function(t) { return t.pnlSol >= 0; }).length;
+    var losses = closed.length - wins;
+    var totalPnl = closed.reduce(function(s, t) { return s + (t.pnlSol || 0); }, 0);
+    var pcts = closed.map(function(t) { return t.pnlPct || 0; });
+    var summary = {
+      total: closed.length, wins: wins, losses: losses,
+      winRate: closed.length > 0 ? Math.round(wins / closed.length * 1000) / 10 : 0,
+      totalPnl: Math.round(totalPnl * 10000) / 10000,
+      bestPct: pcts.length ? Math.max.apply(null, pcts) : 0,
+      worstPct: pcts.length ? Math.min.apply(null, pcts) : 0,
     };
-    document.head.appendChild(adapterScript);
-    </script>
+    render(trades, history, summary, tokenMeta, currentBalance);
+  } catch (err) {
+    document.getElementById('app').innerHTML = '<div class="error"><p>Failed to load on-chain data</p><p style="font-size:13px;margin-top:8px">' + err.message + '</p></div>';
+    console.error(err);
+  }
+}
+
+main();
+</script>
 </body>
 </html>
