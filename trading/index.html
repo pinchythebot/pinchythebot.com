@@ -126,19 +126,24 @@ function parseSwaps(txns, wallet) {
     var ts = tx.timestamp ? new Date(tx.timestamp * 1000).toISOString() : null;
     var solSent = 0, solReceived = 0;
     var tokenMint = null, tokenSent = 0, tokenReceived = 0;
+    // Track native SOL flows
+    var hasNativeSolIn = false, hasNativeSolOut = false;
     for (var ni = 0; ni < nativeTransfers.length; ni++) {
       var nt = nativeTransfers[ni];
       var amt = (nt.amount || 0) / 1e9;
-      if (nt.fromUserAccount === wallet) solSent += amt;
-      if (nt.toUserAccount === wallet) solReceived += amt;
+      if (nt.fromUserAccount === wallet) { solSent += amt; hasNativeSolOut = true; }
+      if (nt.toUserAccount === wallet) { solReceived += amt; hasNativeSolIn = true; }
     }
+    // Only count wrapped SOL (SPL) transfers if there are NO native SOL
+    // transfers in the same direction — otherwise Jupiter/Raydium swaps
+    // get double-counted (wSOL unwrap shows as both token + native).
     for (var ki = 0; ki < transfers.length; ki++) {
       var t = transfers[ki];
       var mint = t.mint || '';
       var tamt = t.tokenAmount || 0;
       if (mint === SOL_MINT) {
-        if (t.fromUserAccount === wallet) solSent += tamt;
-        if (t.toUserAccount === wallet) solReceived += tamt;
+        if (t.fromUserAccount === wallet && !hasNativeSolOut) solSent += tamt;
+        if (t.toUserAccount === wallet && !hasNativeSolIn) solReceived += tamt;
       } else if (STABLES.has(mint)) {
         if (t.fromUserAccount === wallet) solSent += tamt / 150;
         if (t.toUserAccount === wallet) solReceived += tamt / 150;
