@@ -196,16 +196,49 @@ function buildTrades(swaps) {
   return closed;
 }
 
-function buildWalletHistory(swaps, startingSol) {
+function buildWalletHistory(txns, wallet, startingSol) {
+  // Build accurate balance history from ALL transactions (not just swaps).
+  // For each tx, compute net SOL change = (SOL received - SOL sent - fee).
+  // This captures swap proceeds, TX fees, ATA rent, and everything else.
+  var sorted = txns.slice().sort(function(a, b) { return (a.timestamp || 0) - (b.timestamp || 0); });
   var history = [];
   var balance = startingSol;
-  if (swaps.length > 0) history.push({ ts: swaps[0].ts, sol: startingSol, event: 'Start' });
-  for (var i = 0; i < swaps.length; i++) {
-    var s = swaps[i];
-    if (s.type === 'BUY') balance -= s.solAmount;
-    else balance += s.solAmount;
-    history.push({ ts: s.ts, sol: Math.round(balance * 10000) / 10000, event: s.type + ' ' + s.mint.slice(0, 8) + '...' });
+  var first = true;
+
+  for (var i = 0; i < sorted.length; i++) {
+    var tx = sorted[i];
+    if (!tx.timestamp) continue;
+    var ts = new Date(tx.timestamp * 1000).toISOString();
+
+    // Sum all native SOL flows to/from wallet
+    var netSol = 0;
+    var nativeTransfers = tx.nativeTransfers || [];
+    for (var ni = 0; ni < nativeTransfers.length; ni++) {
+      var nt = nativeTransfers[ni];
+      var amt = (nt.amount || 0) / 1e9;
+      if (nt.toUserAccount === wallet) netSol += amt;
+      if (nt.fromUserAccount === wallet) netSol -= amt;
+    }
+
+    // Subtract TX fee (already reflected in native transfers for the fee payer,
+    // but Helius nativeTransfers may not include the fee deduction explicitly)
+    // Actually Helius nativeTransfers DO include fee as a transfer from wallet
+    // to the validator, so netSol already accounts for it. Skip double-counting.
+
+    if (netSol === 0) continue; // skip TXs with no SOL impact
+
+    if (first) {
+      history.push({ ts: ts, sol: startingSol, event: 'Start' });
+      first = false;
+    }
+
+    balance += netSol;
+    // Clamp to avoid floating point weirdness showing tiny negatives
+    if (balance < 0 && balance > -0.001) balance = 0;
+    var label = tx.type === 'SWAP' ? 'Trade' : tx.type || 'TX';
+    history.push({ ts: ts, sol: Math.round(balance * 10000) / 10000, event: label });
   }
+
   return history;
 }
 
@@ -321,7 +354,7 @@ async function main() {
     var mints = swaps.map(function(s) { return s.mint; });
     var tokenMeta = await getTokenMetadata(mints);
     var trades = buildTrades(swaps);
-    var history = buildWalletHistory(swaps, STARTING_SOL);
+    var history = buildWalletHistory(txns, WALLET, STARTING_SOL);
     var closed = trades.filter(function(t) { return !t.isOpen; });
     var wins = closed.filter(function(t) { return t.pnlSol >= 0; }).length;
     var losses = closed.length - wins;
