@@ -317,7 +317,7 @@ function render(trades, history, summary, tokenMeta, currentBalance) {
       }}},
       scales: {
         x: { type: 'time', time: { unit: 'hour' }, grid: { color: '#21262d' }, ticks: { color: '#8b949e' } },
-        y: { min: Math.min.apply(null, data) * 0.95, max: Math.max.apply(null, data) * 1.05, grid: { color: '#21262d' }, ticks: { color: '#8b949e', callback: function(v) { return v.toFixed(4) + ' SOL'; } } }
+        y: { min: 0, max: Math.max.apply(null, data) * 1.05, grid: { color: '#21262d' }, ticks: { color: '#8b949e', callback: function(v) { return v.toFixed(4) + ' SOL'; } } }
       }
     }
   });
