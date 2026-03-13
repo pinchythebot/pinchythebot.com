@@ -351,7 +351,7 @@ async function main() {
     var closed = trades.filter(function(t) { return !t.isOpen; });
     var wins = closed.filter(function(t) { return t.pnlSol >= 0; }).length;
     var losses = closed.length - wins;
-    var totalPnl = closed.reduce(function(s, t) { return s + (t.pnlSol || 0); }, 0);
+    var totalPnl = currentBalance - STARTING_SOL;  // ground truth: actual balance change
     var pcts = closed.map(function(t) { return t.pnlPct || 0; });
     var summary = {
       total: closed.length, wins: wins, losses: losses,
