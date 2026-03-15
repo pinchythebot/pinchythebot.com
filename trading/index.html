@@ -8,38 +8,38 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f6f8fa; color: #1f2328; padding: 20px; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #e6edf3; padding: 20px; }
   .header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
   .header h1 { font-size: 24px; }
-  .loading { text-align: center; padding: 60px; color: #656d76; }
-  .loading .spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid #d0d7de; border-top-color: #0969da; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 12px; }
+  .loading { text-align: center; padding: 60px; color: #8b949e; }
+  .loading .spinner { display: inline-block; width: 24px; height: 24px; border: 3px solid #30363d; border-top-color: #58a6ff; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 12px; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 24px; }
-  .stat-card { background: #ffffff; border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; }
-  .stat-card .label { font-size: 12px; color: #656d76; text-transform: uppercase; margin-bottom: 4px; }
+  .stat-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px; }
+  .stat-card .label { font-size: 12px; color: #8b949e; text-transform: uppercase; margin-bottom: 4px; }
   .stat-card .value { font-size: 24px; font-weight: 600; }
-  .stat-card .value.positive { color: #1a7f37; }
-  .stat-card .value.negative { color: #cf222e; }
-  .chart-container { background: #ffffff; border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; margin-bottom: 24px; }
-  .chart-container h2 { font-size: 16px; margin-bottom: 12px; color: #656d76; }
+  .stat-card .value.positive { color: #3fb950; }
+  .stat-card .value.negative { color: #f85149; }
+  .chart-container { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px; margin-bottom: 24px; }
+  .chart-container h2 { font-size: 16px; margin-bottom: 12px; color: #8b949e; }
   .chart-container canvas { min-height: 350px; }
-  .trades-section { background: #ffffff; border: 1px solid #d0d7de; border-radius: 8px; padding: 16px; }
-  .trades-section h2 { font-size: 16px; margin-bottom: 12px; color: #656d76; }
+  .trades-section { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px; }
+  .trades-section h2 { font-size: 16px; margin-bottom: 12px; color: #8b949e; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  th { text-align: left; padding: 8px 12px; border-bottom: 1px solid #d0d7de; color: #656d76; font-weight: 500; }
-  td { padding: 8px 12px; border-bottom: 1px solid #eaeef2; }
-  tr:hover { background: #f6f8fa; }
-  .pnl-positive { color: #1a7f37; font-weight: 600; }
-  .pnl-negative { color: #cf222e; font-weight: 600; }
+  th { text-align: left; padding: 8px 12px; border-bottom: 1px solid #30363d; color: #8b949e; font-weight: 500; }
+  td { padding: 8px 12px; border-bottom: 1px solid #21262d; }
+  tr:hover { background: #1c2128; }
+  .pnl-positive { color: #3fb950; font-weight: 600; }
+  .pnl-negative { color: #f85149; font-weight: 600; }
   .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500; }
-  .badge-win { background: #dafbe1; color: #1a7f37; }
-  .badge-loss { background: #ffebe9; color: #cf222e; }
-  .badge-open { background: #ddf4ff; color: #0969da; }
-  .time { color: #656d76; font-size: 12px; }
-  .wallet-info { color: #656d76; font-size: 12px; margin-bottom: 8px; }
-  .wallet-info a { color: #0969da; text-decoration: none; }
-  .refresh-note { text-align: center; color: #8c959f; font-size: 12px; margin-top: 16px; }
-  .error { text-align: center; padding: 40px; color: #cf222e; }
+  .badge-win { background: #23883433; color: #3fb950; }
+  .badge-loss { background: #f8514933; color: #f85149; }
+  .badge-open { background: #1f6feb33; color: #58a6ff; }
+  .time { color: #8b949e; font-size: 12px; }
+  .wallet-info { color: #8b949e; font-size: 12px; margin-bottom: 8px; }
+  .wallet-info a { color: #58a6ff; text-decoration: none; }
+  .refresh-note { text-align: center; color: #484f58; font-size: 12px; margin-top: 16px; }
+  .error { text-align: center; padding: 40px; color: #f85149; }
 </style>
 </head>
 <body>
@@ -309,8 +309,8 @@ function render(trades, history, summary, tokenMeta, currentBalance) {
         afterLabel: function(item) { return (history[item.dataIndex] || {}).event || 'Current'; }
       }}},
       scales: {
-        x: { type: 'time', time: { unit: 'hour' }, grid: { color: '#eaeef2' }, ticks: { color: '#656d76' } },
-        y: { min: 0, max: Math.max.apply(null, data) * 1.05, grid: { color: '#eaeef2' }, ticks: { color: '#656d76', callback: function(v) { return v.toFixed(4) + ' SOL'; } } }
+        x: { type: 'time', time: { unit: 'hour' }, grid: { color: '#21262d' }, ticks: { color: '#8b949e' } },
+        y: { min: 0, max: Math.max.apply(null, data) * 1.05, grid: { color: '#21262d' }, ticks: { color: '#8b949e', callback: function(v) { return v.toFixed(4) + ' SOL'; } } }
       }
     }
   });
